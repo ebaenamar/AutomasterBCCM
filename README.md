@@ -23,8 +23,11 @@ phase, per `plan.md`.
 automaster master input.wav -o mastered.wav --editor boris
 automaster master input.wav -o hot.wav --editor boris --no-limiter   # replicate, hot
 
-# Web app (FastAPI + tiny UI) — drag a file, get a mastered WAV
-./.venv/bin/uvicorn app.server:app --port 8000   # http://localhost:8000
+# Web app with Docker (bundles ffmpeg, so .mp4 works) — http://localhost:8000
+docker compose up --build
+
+# ...or without Docker (needs ffmpeg on PATH for .mp4)
+./.venv/bin/uvicorn app.server:app --port 8000
 
 # (Re)train the model from the before/after pairs
 ./.venv/bin/python scripts/train_boris.py

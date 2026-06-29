@@ -1,0 +1,16 @@
+# Keep the build context small and the image lean.
+.venv/
+.git/
+.github/
+data/            # 8 GB of raw/exported media + reports — never ship in the image
+tests/
+scripts/
+__pycache__/
+**/__pycache__/
+*.pyc
+.coverage
+*.egg-info/
+.pytest_cache/
+.DS_Store
+*.md
+!README.md

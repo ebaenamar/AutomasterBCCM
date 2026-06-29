@@ -1,0 +1,20 @@
+# Local one-command run:  docker compose up --build
+# Then open http://localhost:8000
+services:
+  automaster:
+    build: .
+    image: automaster-bccm
+    container_name: automaster-bccm
+    ports:
+      - "8000:8000"
+    # Mount models read-only so a host-side retrain (scripts/train_boris.py)
+    # is picked up on container restart without rebuilding the image.
+    volumes:
+      - ./models:/app/models:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/models')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
