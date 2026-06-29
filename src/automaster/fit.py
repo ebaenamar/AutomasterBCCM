@@ -34,26 +34,38 @@ def _excerpt(b, a, sr, excerpt_s, offset_frac=0.4):
 
 
 def fit_pair(before, after, sr, iters=150, lr=0.1, excerpt_s=6.0,
-             w_env=0.3, w_int=1.0, w_stft=1.0, seed=0):
+             w_env=0.3, w_int=1.0, w_stft=1.0, seed=0,
+             freeze=("comp_makeup_db",)):
     """Fit θ so chain(before) ≈ after. Returns dict with physical θ, the
-    residual (final STFT-magnitude relative error), and loudness errors."""
+    residual (final STFT-magnitude relative error), and loudness errors.
+
+    ``freeze`` pins params to their neutral value (kept out of the gradient).
+    Freezing ``comp_makeup_db`` removes the gain↔makeup degeneracy so the
+    broadband gain — not the compressor — carries loudness, which stops the
+    optimiser from over-compressing to hit level.
+    """
     torch.manual_seed(seed)
     b_np, a_np = _excerpt(np.asarray(before), np.asarray(after), sr, excerpt_s)
     x = _to_mono_tensor(b_np)
     y = _to_mono_tensor(a_np)
 
-    # All params learnable, started at mid-range (max sigmoid gradient).
+    neutral = dsp_diff.neutral_u().clone()
+    free_mask = torch.tensor(
+        [0.0 if n in (freeze or ()) else 1.0 for n in dsp_diff.PARAM_NAMES],
+        dtype=torch.float64)
+    # Free params start at mid-range (max sigmoid gradient); frozen stay neutral.
     u = torch.zeros(dsp_diff.N_PARAMS, dtype=torch.float64).requires_grad_(True)
     loss_fn = losses.MasteringLoss(sr, w_env=w_env, w_int=w_int, w_tp=0.0,
                                    w_stft=w_stft)
     opt = torch.optim.Adam([u], lr=lr)
     for _ in range(iters):
         opt.zero_grad()
-        loss = loss_fn(dsp_diff.render_u(x, sr, u), y)
+        u_cur = neutral * (1 - free_mask) + u * free_mask
+        loss = loss_fn(dsp_diff.render_u(x, sr, u_cur), y)
         loss.backward()
         opt.step()
 
-    u = u.detach()
+    u = (neutral * (1 - free_mask) + u * free_mask).detach()
     y_hat = dsp_diff.render_u(x, sr, u).detach()
     phys = {k: float(v) for k, v in dsp_diff.to_physical(u).items()}
 

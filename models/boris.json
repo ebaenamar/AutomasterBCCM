@@ -2,15 +2,15 @@
   "editor": "boris",
   "target_lufs": -17.5234681391632,
   "theta": {
-    "ls_gain_db": -1.958031431489104,
-    "b0_gain_db": -1.9996021734359353,
-    "b1_gain_db": -1.9542045411318991,
-    "b2_gain_db": -1.6514702314091494,
-    "b3_gain_db": -1.646163610916247,
-    "hs_gain_db": -2.037658624736066,
-    "comp_threshold_db": -26.44275293889473,
-    "comp_ratio": 7.280346940603352,
-    "comp_makeup_db": 6.02472645326766
+    "ls_gain_db": -0.15158930679547566,
+    "b0_gain_db": -0.2282338276269975,
+    "b1_gain_db": -0.024921444491631917,
+    "b2_gain_db": 0.024560254068820342,
+    "b3_gain_db": -0.30582812513468305,
+    "hs_gain_db": -0.3630449646093563,
+    "comp_threshold_db": -20.5746858850425,
+    "comp_ratio": 5.93782964663246,
+    "comp_makeup_db": 0.0015000000043512783
   },
   "n_pairs": 5,
   "notes": "Preset from 5 pairs; target = median master LUFS (-17.5); EQ/comp = median of per-pair fits."
