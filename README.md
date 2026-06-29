@@ -1,0 +1,58 @@
+# AutoMaster (BCCM)
+
+Learn the manual YouTube mastering BCCM editors do in DaVinci Resolve, from
+before/after pairs, then package it for the BCCM workflow. Built TDD, phase by
+phase, per `plan.md`.
+
+## Status
+
+| Phase | Scope | State |
+|-------|-------|-------|
+| 0 | Measurement primitives (LUFS, LRA, true-peak) | ✅ done — 10 tests, 85% cov |
+| 1 | Dataset, alignment, deltas + EQ analysis | ✅ done — 14 tests; real-data report + EQ signature |
+| 2 | Deterministic baseline (target ≈ −17, configurable TP) | ✅ done — 6 tests; validated on a real track |
+| 3 | Differentiable chain (gain → EQ → comp) + loudness losses | ✅ done — 10 tests; θ* recovery verified |
+| 4 | Per-pair fit + Boris regressor ("twin") | ⬜ next |
+| 5 | Production renderer + evaluation | ⬜ |
+| 6 | Packaging (Resolve script / standalone / VST3) | ⬜ |
+
+Run the suite: `./.venv/bin/python -m pytest -q`
+
+## Setup
+
+```bash
+uv venv --python 3.12 .venv
+uv pip install --python .venv -e .
+```
+
+`ffmpeg`/`ffprobe` must be on PATH (used for mp4 decode and as the metric
+cross-check oracle).
+
+## Layout
+
+```
+src/automaster/
+  metrics.py   # BS.1770 LUFS, EBU 3342 LRA, BS.1770-4 true-peak FIR
+  io.py        # WAV via soundfile; mp4/m4a/etc. decoded via ffmpeg
+  align.py     # cross-correlation offset + common-region trim + resample
+  dataset.py   # Pair discovery, editor labels, leakage-free split
+  analyze.py   # per-pair deltas, deltas.csv + style scatter
+data/raw/<editor>/<clip_id>_{before,after}.<ext>   # corpus (symlinks ok)
+data/reports/                                       # deltas.csv, scatter
+```
+
+## Key implementation notes
+
+- **True peak** uses the standardised ITU-R BS.1770-4 4× polyphase FIR, not a
+  clean resampler. Meters legitimately diverge ~0.5 dB on pure tones near
+  Nyquist; mid-band agrees with `ffmpeg ebur128` to <0.15 dB. Downstream
+  limiting must carry headroom to absorb meter disagreement.
+- **TP must be measured on the stereo signal, not a mono mixdown** — averaging
+  L+R hides inter-sample peaks. The deltas table uses mono for LUFS/LRA speed;
+  TP-for-delivery is measured per-channel on stereo.
+- `dasp-pytorch` signatures were verified against the installed version
+  (compressor takes `threshold_db, ratio, attack_ms, release_ms, knee_db,
+  makeup_gain_db`).
+
+See `data/reports/FINDINGS.md` for the Phase-1 empirical results that reframe
+Phase 2's targets.
