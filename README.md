@@ -12,9 +12,36 @@ phase, per `plan.md`.
 | 1 | Dataset, alignment, deltas + EQ analysis | ✅ done — 14 tests; real-data report + EQ signature |
 | 2 | Deterministic baseline (target ≈ −17, configurable TP) | ✅ done — 6 tests; validated on a real track |
 | 3 | Differentiable chain (gain → EQ → comp) + loudness losses | ✅ done — 10 tests; θ* recovery verified |
-| 4 | Per-pair fit + Boris regressor ("twin") | ⬜ next |
-| 5 | Production renderer + evaluation | ⬜ |
-| 6 | Packaging (Resolve script / standalone / VST3) | ⬜ |
+| 4 | Per-pair fit + Boris model ("twin") | ✅ done — fits all 5 pairs, residual <0.04 |
+| 5 | Production renderer + web app | ✅ done — `render.py`, FastAPI + UI, CLI |
+| 6 | Packaging (Resolve script / standalone / VST3) | ⬜ future |
+
+## Use it
+
+```bash
+# CLI
+automaster master input.wav -o mastered.wav --editor boris
+automaster master input.wav -o hot.wav --editor boris --no-limiter   # replicate, hot
+
+# Web app (FastAPI + tiny UI) — drag a file, get a mastered WAV
+./.venv/bin/uvicorn app.server:app --port 8000   # http://localhost:8000
+
+# (Re)train the model from the before/after pairs
+./.venv/bin/python scripts/train_boris.py
+```
+
+Deploy: see [DEPLOY.md](DEPLOY.md) (Render blueprint included; Vercel for the
+static frontend).
+
+## The Boris model
+
+`models/boris.json`, learned from 5 before/after pairs. Robust, consistent
+signature: **target ≈ −17.5 LUFS** and **heavy compression (ratio ~7–8)** — the
+chain reproduces every master with residual < 0.04. The per-band EQ is weakly
+identified (gain↔EQ degeneracy in the fit), so the reliable learned moves are
+loudness + compression; the bass-boost the Phase-1 analysis found is best read
+from `data/reports/eq_curves.png`. More pairs (and Kim's set) would let the
+`predict()` interface graduate from a preset to a real per-clip regressor.
 
 Run the suite: `./.venv/bin/python -m pytest -q`
 

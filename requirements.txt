@@ -1,0 +1,14 @@
+# Serving deps (CPU torch). pandas/matplotlib are dev/analysis-only and not
+# imported on the inference path, so they're intentionally omitted here.
+--extra-index-url https://download.pytorch.org/whl/cpu
+numpy
+scipy
+soundfile
+pyloudnorm
+torch
+torchaudio
+dasp-pytorch
+auraloss
+fastapi
+uvicorn[standard]
+python-multipart

@@ -1,0 +1,15 @@
+# Render.com blueprint. Deploy: push to GitHub, then "New > Blueprint" on
+# Render pointing at this repo. The DSP is CPU-bound torch/scipy, so pick a plan
+# with enough RAM for your longest clips (starter is fine for short clips;
+# bump to standard for full-length tracks).
+services:
+  - type: web
+    name: automaster-bccm
+    runtime: python
+    plan: starter
+    buildCommand: "pip install -r requirements.txt && pip install -e ."
+    startCommand: "uvicorn app.server:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/models
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"

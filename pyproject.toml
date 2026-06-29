@@ -22,6 +22,11 @@ dev = [
     "pytest",
     "pytest-cov",
 ]
+serve = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+]
 
 [project.scripts]
 automaster = "automaster.cli:main"

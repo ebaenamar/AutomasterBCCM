@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AutoMaster (BCCM)</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: system-ui, sans-serif; background:#0e0f13; color:#e8e8ea;
+         margin:0; display:flex; min-height:100vh; align-items:center; justify-content:center; }
+  .card { width:min(560px,92vw); background:#16181f; border:1px solid #262a35;
+          border-radius:16px; padding:28px 28px 22px; box-shadow:0 8px 40px #0008; }
+  h1 { margin:0 0 4px; font-size:22px; }
+  .sub { color:#8b90a0; font-size:13px; margin-bottom:20px; }
+  label { display:block; font-size:13px; color:#aab; margin:14px 0 6px; }
+  input[type=file] { width:100%; padding:10px; background:#0e0f13; border:1px dashed #39405a;
+                     border-radius:10px; color:#ccd; }
+  .row { display:flex; gap:16px; align-items:center; margin-top:14px; }
+  select, button { font:inherit; padding:10px 14px; border-radius:10px; border:1px solid #39405a;
+                   background:#1d2130; color:#e8e8ea; }
+  button { background:#4f7cff; border:none; font-weight:600; cursor:pointer; flex:1; }
+  button:disabled { opacity:.5; cursor:default; }
+  .toggle { display:flex; align-items:center; gap:8px; color:#aab; font-size:13px; }
+  .out { margin-top:20px; display:none; }
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; font-size:13px;
+           background:#0e0f13; border:1px solid #262a35; border-radius:10px; padding:14px; }
+  .stats b { color:#fff; } .k { color:#8b90a0; }
+  audio { width:100%; margin-top:14px; }
+  a.dl { display:inline-block; margin-top:12px; color:#7fa0ff; }
+  .err { color:#ff7676; font-size:13px; margin-top:12px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>AutoMaster <span style="color:#4f7cff">BCCM</span></h1>
+    <div class="sub">Master your audio in the style learned from the editors' manual masters.</div>
+
+    <label>Audio or video file (wav, mp3, mp4, m4a…)</label>
+    <input id="file" type="file" accept="audio/*,video/mp4,.mp4,.m4a" />
+
+    <div class="row">
+      <div style="flex:1">
+        <label style="margin-top:0">Editor style</label>
+        <select id="editor" style="width:100%"></select>
+      </div>
+      <label class="toggle" style="margin-top:26px">
+        <input id="limiter" type="checkbox" checked /> True-peak limiter (−1 dBTP)
+      </label>
+    </div>
+
+    <div class="row"><button id="go" disabled>Master it</button></div>
+    <div id="err" class="err"></div>
+
+    <div id="out" class="out">
+      <div class="stats">
+        <div class="k">Loudness before</div><div><b id="lb"></b> LUFS</div>
+        <div class="k">Loudness after</div><div><b id="la"></b> LUFS</div>
+        <div class="k">True peak before</div><div><b id="tb"></b> dBTP</div>
+        <div class="k">True peak after</div><div><b id="ta"></b> dBTP</div>
+      </div>
+      <audio id="player" controls></audio>
+      <a id="dl" class="dl" download>⬇ Download mastered WAV</a>
+    </div>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const api = ""; // same origin
+
+async function loadModels() {
+  try {
+    const r = await fetch(api + "/api/models");
+    const j = await r.json();
+    $("editor").innerHTML = j.models.map(m =>
+      `<option value="${m.editor}">${m.editor} (target ${m.target_lufs.toFixed(1)} LUFS)</option>`).join("");
+  } catch (e) { $("err").textContent = "Could not load models."; }
+}
+$("file").addEventListener("change", () => { $("go").disabled = !$("file").files.length; });
+
+$("go").addEventListener("click", async () => {
+  $("err").textContent = ""; $("out").style.display = "none";
+  $("go").disabled = true; $("go").textContent = "Mastering…";
+  const fd = new FormData();
+  fd.append("file", $("file").files[0]);
+  fd.append("editor", $("editor").value);
+  fd.append("limiter", $("limiter").checked ? "true" : "false");
+  try {
+    const r = await fetch(api + "/api/master", { method: "POST", body: fd });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    $("lb").textContent = r.headers.get("X-Before-LUFS");
+    $("la").textContent = r.headers.get("X-After-LUFS");
+    $("tb").textContent = r.headers.get("X-Before-TP");
+    $("ta").textContent = r.headers.get("X-After-TP");
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    $("player").src = url; $("dl").href = url;
+    $("dl").download = "mastered_" + $("editor").value + ".wav";
+    $("out").style.display = "block";
+  } catch (e) { $("err").textContent = "Error: " + e.message; }
+  $("go").disabled = false; $("go").textContent = "Master it";
+});
+loadModels();
+</script>
+</body>
+</html>
